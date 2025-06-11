@@ -76,7 +76,7 @@ fun HomeScreen(
                 ) {
                     items(state.whiteBoards) { whiteBoard ->
                         WhiteBoardItemCard(modifier = Modifier.clickable {
-                            whiteBoard.id?.let { onCardClick(it) }
+                            whiteBoard.id?.let {id -> onCardClick(id) }
                         }, whiteBoard = whiteBoard, onRenameClick = {
                             viewModel.onAction(HomeEvent.OnSelectWhiteboard(whiteBoard))
                             viewModel.onAction(HomeEvent.OnNewWhiteboardNameChange(whiteBoard.name))

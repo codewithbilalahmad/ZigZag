@@ -79,7 +79,7 @@ fun WhiteboardScreen(
     }) { contentPadding ->
         Box(
             modifier = modifier
-                .fillMaxSize()
+                .fillMaxSize().background(state.canvasColor)
                 .padding(contentPadding)
         ) {
             when (uiType) {

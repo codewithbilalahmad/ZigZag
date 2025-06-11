@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -102,12 +103,16 @@ fun ColorSelectionDialog(
                 ) {
                     SatValPanel(
                         hue = hsv.first,
-                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
                         setSalVal = { sat, value ->
                             hsv = Triple(hsv.first, sat, value)
                         })
                     Spacer(Modifier.height(20.dp))
-                    HueBar(modifier = Modifier.fillMaxWidth().height(40.dp), setColor = { hue ->
+                    HueBar(modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp), setColor = { hue ->
                         hsv = Triple(hue, hsv.second, hsv.third)
                     })
                 }
@@ -143,7 +148,8 @@ fun SatValPanel(hue: Float, setSalVal: (Float, Float) -> Unit, modifier: Modifie
     ) {
         val cornerRadius = 12.dp.toPx()
         val satValSize = size
-        val bitmap = Bitmap.createBitmap(size.width.toInt(), size.height.toInt(), Bitmap.Config.ARGB_8888)
+        val bitmap =
+            Bitmap.createBitmap(size.width.toInt(), size.height.toInt(), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val satValPanel = RectF(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
         val rgb = AndroidColor.HSVToColor(floatArrayOf(hue, 1f, 1f))
@@ -219,30 +225,34 @@ fun HueBar(setColor: (Float) -> Unit, modifier: Modifier) {
     val interactionSource = remember {
         MutableInteractionSource()
     }
-    var pressOffset by remember { mutableStateOf(Offset.Zero) }
+    val pressOffset = remember {
+        mutableStateOf(Offset.Zero)
+    }
     Canvas(
         modifier = modifier
-            .clip(RoundedCornerShape(50.dp))
-            .emitDragGestures(interactionSource = interactionSource)
+            .clip(RoundedCornerShape(50))
+            .emitDragGestures(interactionSource)
     ) {
         val drawScopeSize = size
-        val bitmap =
-            Bitmap.createBitmap(size.width.toInt(), size.height.toInt(), Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(size.width.toInt(), size.height.toInt(), Bitmap.Config.ARGB_8888)
         val hueCanvas = Canvas(bitmap)
         val huePanel = RectF(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
         val hueColors = IntArray((huePanel.width()).toInt())
         var hue = 0f
         for (i in hueColors.indices) {
             hueColors[i] = AndroidColor.HSVToColor(floatArrayOf(hue, 1f, 1f))
-            hue += 360 / hueColors.size
+            hue += 360f / hueColors.size
         }
         val linePaint = Paint()
-        linePaint.strokeWidth = 0f
+        linePaint.strokeWidth = 0F
         for (i in hueColors.indices) {
             linePaint.color = hueColors[i]
-            hueCanvas.drawLine(i.toFloat(), 0f, i.toFloat(), huePanel.bottom, linePaint)
+            hueCanvas.drawLine(i.toFloat(), 0F, i.toFloat(), huePanel.bottom, linePaint)
         }
-        drawBitmap(bitmap = bitmap, panel = huePanel)
+        drawBitmap(
+            bitmap = bitmap,
+            panel = huePanel
+        )
         fun pointToHue(pointX: Float): Float {
             val width = huePanel.width()
             val x = when {
@@ -252,17 +262,21 @@ fun HueBar(setColor: (Float) -> Unit, modifier: Modifier) {
             }
             return x * 360f / width
         }
+
         scope.collectForPress(interactionSource) { pressPosition ->
             val pressPos = pressPosition.x.coerceIn(0f..drawScopeSize.width)
-            pressOffset = Offset(x = pressPos, 0f)
+            pressOffset.value = Offset(pressPos, 0f)
             val selectedHue = pointToHue(pressPos)
             setColor(selectedHue)
         }
+
         drawCircle(
-            color = Color.White,
-            radius = size.height / 2,
-            center = Offset(x = pressOffset.x, size.height / 2),
-            style = Stroke(width = 2.dp.toPx())
+            Color.White,
+            radius = size.height/2,
+            center = Offset(pressOffset.value.x, size.height/2),
+            style = Stroke(
+                width = 2.dp.toPx()
+            )
         )
     }
 }
