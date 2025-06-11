@@ -42,6 +42,7 @@ class WhiteboardViewModel(
     private val settingRepository: SettingRepository, savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val whiteBoardId = savedStateHandle.toRoute<Destinations.WhiteBoardScreen>().whiteBoardId
+    println("")
     private var isFirstPath = true
     private var updatedWhiteBoardId = MutableStateFlow(whiteBoardId)
     private val _state = MutableStateFlow(WhiteboardState())
