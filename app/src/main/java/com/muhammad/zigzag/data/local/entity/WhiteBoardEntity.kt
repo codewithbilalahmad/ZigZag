@@ -11,5 +11,6 @@ data class WhiteBoardEntity(
     val id : Long?=null,
     val name : String,
     val lastEdited : LocalDate,
-    val canvasColor : Int
+    val canvasColor : Int,
+    val previewUrl : String?=null
 )

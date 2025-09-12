@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.muhammad.zigzag.domain.model.ColorScheme
 import com.muhammad.zigzag.domain.repository.SettingRepository
+import kotlinx.coroutines.Dispatchers
 
 class SettingsViewModel(private var settingsRespository: SettingRepository) : ViewModel() {
     val currentScheme = settingsRespository.getColorScheme().stateIn(
@@ -15,7 +16,7 @@ class SettingsViewModel(private var settingsRespository: SettingRepository) : Vi
         initialValue = ColorScheme.SYSTEM_DEFAULT
     )
     fun saveColorScheme(colorScheme: ColorScheme){
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             settingsRespository.saveColorScheme(colorScheme)
         }
     }

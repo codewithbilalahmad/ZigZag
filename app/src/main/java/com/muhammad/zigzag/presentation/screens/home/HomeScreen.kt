@@ -1,8 +1,11 @@
 package com.muhammad.zigzag.presentation.screens.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,14 +13,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -35,6 +40,7 @@ import com.muhammad.zigzag.R
 import com.muhammad.zigzag.presentation.components.WhiteBoardItemCard
 import org.koin.androidx.compose.koinViewModel
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
     onSettingClick: () -> Unit,
@@ -62,48 +68,46 @@ fun HomeScreen(
                 contentDescription = null
             )
         }
-    }) { paddingValue ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValue)
-        ) {
+    }) { paddingValues ->
+        AnimatedContent(targetState = isListLayout, transitionSpec = {
+            fadeIn() togetherWith fadeOut()
+        }) {isListLayout ->
             if (isListLayout) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    horizontalAlignment = Alignment.CenterHorizontally, contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(state.whiteBoards) { whiteBoard ->
-                        WhiteBoardItemCard(modifier = Modifier.clickable {
-                            whiteBoard.id?.let {id -> onCardClick(id) }
-                        }, whiteBoard = whiteBoard, onRenameClick = {
-                            viewModel.onAction(HomeEvent.OnSelectWhiteboard(whiteBoard))
-                            viewModel.onAction(HomeEvent.OnNewWhiteboardNameChange(whiteBoard.name))
+                    itemsIndexed(state.whiteBoards) { index, whiteboard ->
+                        WhiteBoardItemCard(whiteBoard = whiteboard, onRenameClick = {
+                            viewModel.onAction(HomeEvent.OnSelectWhiteboard(whiteboard))
+                            viewModel.onAction(HomeEvent.OnNewWhiteboardNameChange(whiteboard.name))
                             viewModel.onAction(HomeEvent.OnToggleEditWhiteboardDialog)
+                        }, onClick = {
+                            whiteboard.id?.let { onCardClick(it) }
                         }, onDeleteClick = {
-                            viewModel.onAction(HomeEvent.OnSelectWhiteboard(whiteBoard))
+                            viewModel.onAction(HomeEvent.OnSelectWhiteboard(whiteboard))
                             viewModel.onAction(HomeEvent.OnToggleDeleteWhiteboardDialog)
                         })
                     }
                 }
             } else {
                 LazyVerticalGrid(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                     columns = GridCells.Adaptive(150.dp),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(state.whiteBoards) { whiteBoard ->
-                        WhiteBoardItemCard(modifier = Modifier.clickable {
-                            whiteBoard.id?.let { onCardClick(it) }
-                        }, whiteBoard = whiteBoard, onRenameClick = {
-                            viewModel.onAction(HomeEvent.OnSelectWhiteboard(whiteBoard))
-                            viewModel.onAction(HomeEvent.OnNewWhiteboardNameChange(whiteBoard.name))
+                    itemsIndexed(state.whiteBoards) { index, whiteboard ->
+                        WhiteBoardItemCard(whiteBoard = whiteboard, onRenameClick = {
+                            viewModel.onAction(HomeEvent.OnSelectWhiteboard(whiteboard))
+                            viewModel.onAction(HomeEvent.OnNewWhiteboardNameChange(whiteboard.name))
                             viewModel.onAction(HomeEvent.OnToggleEditWhiteboardDialog)
+                        }, onClick = {
+                            whiteboard.id?.let { onCardClick(it) }
                         }, onDeleteClick = {
-                            viewModel.onAction(HomeEvent.OnSelectWhiteboard(whiteBoard))
+                            viewModel.onAction(HomeEvent.OnSelectWhiteboard(whiteboard))
                             viewModel.onAction(HomeEvent.OnToggleDeleteWhiteboardDialog)
                         })
                     }
@@ -163,7 +167,7 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun DashboardTopBar(
     modifier: Modifier = Modifier,
@@ -176,14 +180,14 @@ private fun DashboardTopBar(
     }, actions = {
         IconButton(onClick = {
             onToggleListLayout()
-        }) {
-            val icon = if (isListLayout) R.drawable.ic_list else R.drawable.ic_grid
+        }, shapes = IconButtonDefaults.shapes()) {
+            val icon = if (isListLayout) R.drawable.ic_grid else R.drawable.ic_list
             Icon(
                 imageVector = ImageVector.vectorResource(icon),
                 contentDescription = null
             )
         }
-        IconButton(onClick = onSettingClick) {
+        IconButton(onClick = onSettingClick, shapes = IconButtonDefaults.shapes()) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_setting),
                 contentDescription = null

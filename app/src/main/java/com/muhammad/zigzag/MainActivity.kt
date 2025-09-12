@@ -14,29 +14,32 @@ import com.muhammad.zigzag.domain.model.ColorScheme
 import com.muhammad.zigzag.presentation.navigation.AppNavigation
 import com.muhammad.zigzag.presentation.screens.settings.SettingsViewModel
 import com.muhammad.zigzag.presentation.theme.ZigZagTheme
-import org.koin.androidx.compose.koinViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
+    val viewModel: SettingsViewModel by viewModel()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT
+            ), navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+        )
         setContent {
-            enableEdgeToEdge(
-                statusBarStyle = SystemBarStyle.light(
-                    Color.TRANSPARENT,
-                    Color.TRANSPARENT
-                ), navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-            )
             val navHostController = rememberNavController()
-            val settingViewModel = koinViewModel<SettingsViewModel>()
-            val colorScheme by settingViewModel.currentScheme.collectAsStateWithLifecycle()
+            val colorScheme by viewModel.currentScheme.collectAsStateWithLifecycle()
             val isDarkTheme = when (colorScheme) {
                 ColorScheme.SYSTEM_DEFAULT -> isSystemInDarkTheme()
                 ColorScheme.LIGHT -> false
                 ColorScheme.DARK -> true
             }
             ZigZagTheme(isDarkTheme) {
-                AppNavigation(navHostController = navHostController, currentScheme = colorScheme) {
-                    settingViewModel.saveColorScheme(it)
+                AppNavigation(
+                    navHostController = navHostController,
+                    currentScheme = colorScheme
+                ) { colorScheme ->
+                    viewModel.saveColorScheme(colorScheme)
                 }
             }
         }

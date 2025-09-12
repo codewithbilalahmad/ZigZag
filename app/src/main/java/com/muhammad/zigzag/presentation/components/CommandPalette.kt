@@ -20,11 +20,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,9 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import com.muhammad.zigzag.R
 import com.muhammad.zigzag.domain.model.DrawingTool
@@ -44,7 +43,7 @@ import org.muhammad.canvos.domain.model.ColorPaletteType
 fun CommandPaletteDrawerContent(
     modifier: Modifier = Modifier,
     selectedDrawingTool: DrawingTool,
-    onCloseIconClick: () -> Unit,
+    drawingName: String,
     strokeColors: List<Color>,
     selectedStrokeColor: Color,
     onStrokeColorChange: (Color) -> Unit,
@@ -62,7 +61,6 @@ fun CommandPaletteDrawerContent(
     Surface(modifier = modifier) {
         ColorPaletteContent(
             selectedDrawingTool = selectedDrawingTool,
-            onCloseIconClick = onCloseIconClick,
             strokeColors = strokeColors,
             selectedStrokeColor = selectedStrokeColor,
             onStrokeColorChange = onStrokeColorChange,
@@ -76,7 +74,7 @@ fun CommandPaletteDrawerContent(
             onColorPaletteIconClick = onColorPaletteIconClick,
             canvasColors = canvasColors,
             selectedCanvasColor = selectedCanvasColor,
-            onSelectedCanvasColor = onSelectedCanvasColor
+            onSelectedCanvasColor = onSelectedCanvasColor, drawingName = drawingName
         )
     }
 }
@@ -86,7 +84,6 @@ fun CommandPaletteCard(
     modifier: Modifier = Modifier,
     isVisible: Boolean,
     selectedDrawingTool: DrawingTool,
-    onCloseIconClick: () -> Unit,
     strokeColors: List<Color>,
     selectedStrokeColor: Color,
     onStrokeColorChange: (Color) -> Unit,
@@ -96,6 +93,7 @@ fun CommandPaletteCard(
     strokeSlideValue: Float,
     onStrokeSlideValueChange: (Float) -> Unit,
     opacitySlideValue: Float,
+    drawingName: String,
     onOpacitySliderValueChange: (Float) -> Unit,
     onSelectedCanvasColor: (Color) -> Unit, selectedCanvasColor: Color,
     onColorPaletteIconClick: (ColorPaletteType) -> Unit, canvasColors: List<Color>,
@@ -109,7 +107,6 @@ fun CommandPaletteCard(
         ElevatedCard(modifier = Modifier.width(250.dp)) {
             ColorPaletteContent(
                 selectedDrawingTool = selectedDrawingTool,
-                onCloseIconClick = onCloseIconClick,
                 strokeColors = strokeColors,
                 selectedStrokeColor = selectedStrokeColor,
                 onStrokeColorChange = onStrokeColorChange,
@@ -123,7 +120,7 @@ fun CommandPaletteCard(
                 selectedCanvasColor = selectedCanvasColor,
                 canvasColors = canvasColors,
                 onColorPaletteIconClick = onColorPaletteIconClick,
-                onSelectedCanvasColor = onSelectedCanvasColor
+                onSelectedCanvasColor = onSelectedCanvasColor, drawingName = drawingName
             )
         }
     }
@@ -132,8 +129,8 @@ fun CommandPaletteCard(
 @Composable
 fun ColorPaletteContent(
     modifier: Modifier = Modifier,
+    drawingName: String,
     selectedDrawingTool: DrawingTool,
-    onCloseIconClick: () -> Unit,
     strokeColors: List<Color>,
     selectedStrokeColor: Color, selectedCanvasColor: Color,
     onStrokeColorChange: (Color) -> Unit, onSelectedCanvasColor: (Color) -> Unit,
@@ -148,66 +145,68 @@ fun ColorPaletteContent(
 ) {
     val updatedCanvasColors = listOf(Color.White) + canvasColors
     val updatedStrokeColors = listOf(Color.Black) + strokeColors
-    Column(modifier = modifier.padding(10.dp)) {
-        Row(
+    Column(modifier = modifier) {
+        Text(drawingName, style = MaterialTheme.typography.titleLarge)
+        HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Untitled", style = MaterialTheme.typography.titleLarge)
-            IconButton(onClick = onCloseIconClick) {
-                Icon(imageVector = ImageVector.vectorResource(R.drawable.ic_cancel), contentDescription = null)
-            }
-        }
-        HorizontalDivider(modifier = Modifier.height(20.dp))
-        ColorSection(
-            sectionTitle = "Canvas",
-            colors = updatedCanvasColors,
-            selectedColor = selectedCanvasColor,
-            onColorChange = onSelectedCanvasColor,
-            onColorPlatteClick = {
-                onColorPaletteIconClick(ColorPaletteType.CANVAS)
-            })
-        Spacer(Modifier.height(20.dp))
-        ColorSection(
-            sectionTitle = "Stroke",
-            colors = updatedStrokeColors,
-            selectedColor = selectedStrokeColor,
-            onColorChange = onStrokeColorChange,
-            onColorPlatteClick = {
-                onColorPaletteIconClick(ColorPaletteType.STROKE)
-            })
-        when (selectedDrawingTool) {
-            DrawingTool.RECTANGLE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE -> {
-                Spacer(Modifier.height(20.dp))
-                ColorSection(
-                    sectionTitle = "Background",
-                    colors = backgroundColors,
-                    isBackgroundColor = true,
-                    selectedColor = selectedBackgroundColor,
-                    onColorChange = onBackgroundColorChange,
-                    onColorPlatteClick = {})
-            }
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            thickness = 1.dp
+        )
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)) {
+            ColorSection(
+                sectionTitle = "Canvas",
+                colors = updatedCanvasColors,
+                selectedColor = selectedCanvasColor,
+                onColorChange = onSelectedCanvasColor,
+                onColorPlatteClick = {
+                    onColorPaletteIconClick(ColorPaletteType.CANVAS)
+                })
+            Spacer(Modifier.height(20.dp))
+            ColorSection(
+                sectionTitle = "Stroke",
+                colors = updatedStrokeColors,
+                selectedColor = selectedStrokeColor,
+                onColorChange = onStrokeColorChange,
+                onColorPlatteClick = {
+                    onColorPaletteIconClick(ColorPaletteType.STROKE)
+                })
+            when (selectedDrawingTool) {
+                DrawingTool.RECTANGLE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE -> {
+                    Spacer(Modifier.height(20.dp))
+                    ColorSection(
+                        sectionTitle = "Background",
+                        colors = backgroundColors,
+                        isBackgroundColor = true,
+                        selectedColor = selectedBackgroundColor,
+                        onColorChange = onBackgroundColorChange,
+                        onColorPlatteClick = {
+                            onColorPaletteIconClick(ColorPaletteType.FILL)
+                        })
+                }
 
-            else -> Unit
+                else -> Unit
+            }
+            Spacer(Modifier.height(20.dp))
+            SliderSection(
+                sectionTitle = "Stroke Width",
+                sliderValue = strokeSlideValue,
+                slideValueRange = 1f..25f,
+                onSliderValueChange = onStrokeSlideValueChange
+            )
+            Spacer(Modifier.height(15.dp))
+            SliderSection(
+                sectionTitle = "Opacity",
+                sliderValue = opacitySlideValue,
+                onSliderValueChange = onOpacitySliderValueChange,
+                slideValueRange = 1f..100f
+            )
         }
-        Spacer(Modifier.height(20.dp))
-        SliderSection(
-            sectionTitle = "Stroke Width",
-            sliderValue = strokeSlideValue,
-            slideValueRange = 1f..25f,
-            onSliderValueChange = onStrokeSlideValueChange
-        )
-        Spacer(Modifier.height(15.dp))
-        SliderSection(
-            sectionTitle = "Opacity",
-            sliderValue = opacitySlideValue,
-            onSliderValueChange = onOpacitySliderValueChange,
-            slideValueRange = 1f..100f
-        )
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ColorSection(
     sectionTitle: String,
@@ -227,11 +226,15 @@ fun ColorSection(
             if (isBackgroundColor) {
                 item {
                     Icon(
-                        modifier = Modifier.size(30.dp).border(
-                            1.dp,
-                            color = if (selectedColor == Color.Transparent) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            shape = CircleShape
-                        ).padding(2.dp).clip(CircleShape)
+                        modifier = Modifier
+                            .size(30.dp)
+                            .border(
+                                1.dp,
+                                color = if (selectedColor == Color.Transparent) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                shape = CircleShape
+                            )
+                            .padding(2.dp)
+                            .clip(CircleShape)
                             .clickable { onColorChange(Color.Transparent) },
                         painter = painterResource(
                             R.drawable.ic_transparent_bg
@@ -243,19 +246,27 @@ fun ColorSection(
             }
             items(colors) { color ->
                 Box(
-                    modifier = Modifier.size(30.dp).border(
-                        1.dp,
-                        color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Transparent,
-                        shape = CircleShape
-                    ).padding(2.dp).background(color, CircleShape)
+                    modifier = Modifier
+                        .size(30.dp)
+                        .border(
+                            1.dp,
+                            color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            shape = CircleShape
+                        )
+                        .padding(2.dp)
+                        .background(color, CircleShape)
                         .clickable { onColorChange(color) }
                 )
             }
             item {
                 Spacer(Modifier.width(5.dp))
-                IconButton(onClick = { onColorPlatteClick() }, modifier = Modifier.size(25.dp)) {
+                IconButton(
+                    onClick = { onColorPlatteClick() },
+                    modifier = Modifier.size(25.dp),
+                    shapes = IconButtonDefaults.shapes()
+                ) {
                     Icon(
-                        painter = painterResource(R.drawable.img_color_wheel),
+                        painter = painterResource(R.drawable.ic_color_wheel),
                         contentDescription = null, tint = Color.Unspecified
                     )
                 }
@@ -278,7 +289,7 @@ private fun SliderSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Slider(
+            AppSlider(
                 modifier = Modifier.weight(1f),
                 value = sliderValue,
                 onValueChange = onSliderValueChange,

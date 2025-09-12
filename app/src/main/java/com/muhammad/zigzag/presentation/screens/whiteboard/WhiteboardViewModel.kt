@@ -1,5 +1,6 @@
 package com.muhammad.zigzag.presentation.screens.whiteboard
 
+import android.annotation.SuppressLint
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -18,6 +19,9 @@ import com.muhammad.zigzag.domain.repository.PathRepository
 import com.muhammad.zigzag.domain.repository.SettingRepository
 import com.muhammad.zigzag.domain.repository.WhiteBoardRepository
 import com.muhammad.zigzag.presentation.navigation.Destinations
+import com.muhammad.zigzag.utils.drawWhiteboardThumbnail
+import com.muhammad.zigzag.utils.saveBitmapToFile
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,21 +31,24 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.muhammad.canvos.domain.model.ColorPaletteType
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 class WhiteboardViewModel(
     private val pathRepository: PathRepository,
     private val whiteBoardRepository: WhiteBoardRepository,
     private val settingRepository: SettingRepository, savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val whiteBoardId = savedStateHandle.toRoute<Destinations.WhiteBoardScreen>().whiteBoardId
+    private val whiteBoardId =
+        savedStateHandle.toRoute<Destinations.WhiteBoardScreen>().whiteBoardId
     private var isFirstPath = true
     private var updatedWhiteBoardId = MutableStateFlow(whiteBoardId)
     private val _state = MutableStateFlow(WhiteboardState())
@@ -70,14 +77,13 @@ class WhiteboardViewModel(
     }
 
     private fun getWhiteBoardById(whiteBoardId: Long) {
-        println("Whiteboard id : $whiteBoardId")
         viewModelScope.launch {
             val whiteboard = whiteBoardRepository.getWhiteBoardById(whiteBoardId)
-            whiteboard?.let {
+            whiteboard?.let { board ->
                 _state.update {
                     it.copy(
-                        whiteBoardName = it.whiteBoardName,
-                        canvasColor = it.canvasColor
+                        whiteBoardName = board.name,
+                        canvasColor = board.canvasColor
                     )
                 }
             }
@@ -111,11 +117,9 @@ class WhiteboardViewModel(
                         DrawingTool.ERASER -> {
                             deletePaths(state.value.pathToBeDeleted)
                         }
-
                         DrawingTool.LASER_PEN -> {
                             _state.update { it.copy(laserPenPath = drawnPath) }
                         }
-
                         else -> {
                             insertPath(drawnPath)
                         }
@@ -149,8 +153,8 @@ class WhiteboardViewModel(
                 }
             }
 
-            WhiteboardEvent.OnFabClick -> {
-                _state.update { it.copy(isDrawingToolsCardVisible = true) }
+            WhiteboardEvent.OnDrawingToolFabClick -> {
+                _state.update { it.copy(isDrawingToolsCardVisible = !state.value.isDrawingToolsCardVisible) }
             }
 
             is WhiteboardEvent.OpacitySlideValueChange -> {
@@ -225,28 +229,104 @@ class WhiteboardViewModel(
                 savePreferredColors(updatedColors, state.selectedColorPaletteType)
             }
 
-            WhiteboardEvent.OnToggleCommandPaletteBottomSheet -> {
-                _state.update { it.copy(showCommandPaletteBottomSheet = !state.value.showCommandPaletteBottomSheet) }
+            WhiteboardEvent.OnToggleCommandPaletteDialog -> {
+                _state.update { it.copy(showCommandPaletteDialog = !state.value.showCommandPaletteDialog) }
+            }
+
+            WhiteboardEvent.OnRedoPath -> onRedoPath()
+            WhiteboardEvent.OnUndoPath -> onUndoPath()
+            is WhiteboardEvent.OnCanvasSizeChange -> {
+                _state.update { it.copy(canvasSize = event.size) }
+            }
+
+            WhiteboardEvent.UpdateWhiteboardPreview -> {
+                upsertWhiteBoardPreview()
+            }
+        }
+    }
+    private fun onUndoPath() {
+        viewModelScope.launch {
+            val currentState = state.value
+            if (currentState.undoStack.isNotEmpty()) {
+                val updatedUndo = ArrayDeque(currentState.undoStack)
+                val last = updatedUndo.removeLast()
+                val updatedRedo = ArrayDeque(currentState.redoStack).apply { addLast(last) }
+                _state.update {
+                    it.copy(
+                        undoStack = updatedUndo,
+                        redoStack = updatedRedo,
+                        isUndoEnable = currentState.undoStack.isNotEmpty(),
+                        isRedoEnable = true
+                    )
+                }
             }
         }
     }
 
+    private fun onRedoPath() {
+        val currentState = state.value
+        if (currentState.redoStack.isNotEmpty()) {
+            val updatedRedo = ArrayDeque(currentState.redoStack)
+            val last = updatedRedo.removeLast()
+            val updatedUndo = ArrayDeque(currentState.undoStack).apply { addLast(last) }
+
+            _state.update {
+                it.copy(
+                    undoStack = updatedUndo,
+                    redoStack = updatedRedo,
+                    isUndoEnable = true,
+                    isRedoEnable = updatedRedo.isNotEmpty()
+                )
+            }
+        }
+    }
+
+
     private fun savePreferredColors(colors: List<Color>, colorPalette: ColorPaletteType) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             settingRepository.savePreferredColors(colors = colors, colorPaletteType = colorPalette)
         }
     }
 
+    @SuppressLint("UseKtx")
+    @OptIn(ExperimentalTime::class)
+    private fun upsertWhiteBoardPreview() {
+        viewModelScope.launch {
+            val originalWidth = state.value.canvasSize.width.takeIf { it > 0 } ?: 1082
+            val originalHeight = state.value.canvasSize.height.takeIf { it > 0 } ?: 1920
+            val targetWidthPx = 300
+            val previewBitmap = drawWhiteboardThumbnail(
+                paths = state.value.undoStack.toList(),
+                canvasColor = state.value.canvasColor,
+                originalWidth = originalWidth,
+                originalHeight = originalHeight,
+                targetWidthPx = targetWidthPx
+            )
+            val previewPath = saveBitmapToFile(previewBitmap, updatedWhiteBoardId.value ?: -1)
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            val updatedWhiteBoard = WhiteBoard(
+                name = state.value.whiteBoardName,
+                lastEdited = today,
+                canvasColor = state.value.canvasColor,
+                id = updatedWhiteBoardId.value, previewUrl = previewPath
+            )
+            val newId = whiteBoardRepository.upsertWhiteboard(updatedWhiteBoard)
+            updatedWhiteBoardId.value = newId
+        }
+    }
+
+    @SuppressLint("UseKtx")
+    @OptIn(ExperimentalTime::class)
     private fun upsertWhiteBoard() {
         viewModelScope.launch {
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-            val whiteBoard = WhiteBoard(
+            val updatedWhiteBoard = WhiteBoard(
                 name = state.value.whiteBoardName,
                 lastEdited = today,
                 canvasColor = state.value.canvasColor,
                 id = updatedWhiteBoardId.value
             )
-            val newId = whiteBoardRepository.upsertWhiteboard(whiteBoard)
+            val newId = whiteBoardRepository.upsertWhiteboard(updatedWhiteBoard)
             updatedWhiteBoardId.value = newId
         }
     }
@@ -262,6 +342,14 @@ class WhiteboardViewModel(
     private fun insertPath(path: DrawnPath) {
         viewModelScope.launch {
             pathRepository.upsertPath(path)
+            _state.update {
+                it.copy(
+                    undoStack = ArrayDeque(it.undoStack).apply { addLast(path) },
+                    redoStack = ArrayDeque(),
+                    isUndoEnable = true,
+                    isRedoEnable = false
+                )
+            }
         }
     }
 
@@ -296,20 +384,22 @@ class WhiteboardViewModel(
             DrawingTool.TRIANGLE -> {
                 createTrianglePath(start = startOffset, end = offset)
             }
+
+            DrawingTool.DOUBLE_ARROW -> {
+                createDoubleArrowPath(start = startOffset, end = offset)
+            }
         }
         updatedWhiteBoardId.value?.let { id ->
             _state.update {
                 it.copy(
-                    currentPath = updatedPath?.let { path ->
-                        DrawnPath(
-                            path = path,
-                            drawnPath = state.value.selectedDrawingTool,
-                            strokeWidth = state.value.strokeWidth,
-                            backgroundColor = state.value.backgroundColor,
-                            opacity = state.value.opacity,
-                            strokeColor = state.value.strokeColor, whiteBoardId = id
-                        )
-                    }
+                    currentPath = DrawnPath(
+                        path = updatedPath,
+                        drawnPath = state.value.selectedDrawingTool,
+                        strokeWidth = state.value.strokeWidth,
+                        backgroundColor = state.value.backgroundColor,
+                        opacity = state.value.opacity,
+                        strokeColor = state.value.strokeColor, whiteBoardId = id
+                    )
                 )
             }
         }
@@ -317,7 +407,7 @@ class WhiteboardViewModel(
 
     private fun createEraserPath(continuingOffset: Offset): Path {
         return Path().apply {
-            addOval(Rect(center = continuingOffset, radius = 5f))
+            addOval(Rect(center = continuingOffset, radius = 10f))
         }
     }
 
@@ -359,26 +449,81 @@ class WhiteboardViewModel(
             addOval(Rect(offset = start, size = Size(width, height)))
         }
     }
-    private fun createArrowPath(start : Offset, end : Offset) : Path{
-        val arrowHeadLength = 30f
-        val arrowHeadAngle = 30f
+    private fun createDoubleArrowPath(start: Offset, end: Offset) : Path{
+        val arrowHeadLength = 40f
+        val arrowHeadAngle = 40f
         val angle = atan2(end.y - start.y, end.x - start.x)
         val angleRadius = Math.toRadians(arrowHeadAngle.toDouble()).toFloat()
+        val startAngele = angle + Math.PI.toFloat()
         val arrowPoint1 = Offset(
+            x = start.x + arrowHeadLength * cos(startAngele - angleRadius),
+            y = start.y + arrowHeadLength * sin(startAngele - angleRadius)
+        )
+        val arrowPoint2 = Offset(
+            x = start.x + arrowHeadLength * cos(startAngele + angleRadius),
+            y = start.y + arrowHeadLength * sin(startAngele + angleRadius)
+        )
+        val arrowPoint3 = Offset(
             x = end.x - arrowHeadLength * cos(angle - angleRadius),
             y = end.y - arrowHeadLength * sin(angle - angleRadius)
         )
-        val arrowPoint2 = Offset(
+        val arrowPoint4 = Offset(
             x = end.x - arrowHeadLength * cos(angle + angleRadius),
             y = end.y - arrowHeadLength * sin(angle + angleRadius)
         )
         return Path().apply {
             moveTo(start.x, start.y)
             lineTo(end.x, end.y)
-            moveTo(end.x , end.y)
+            moveTo(start.x, start.y)
             lineTo(arrowPoint1.x, arrowPoint1.y)
+            moveTo(start.x, start.y)
+            lineTo(arrowPoint2.x, arrowPoint2.y)
             moveTo(end.x, end.y)
-            lineTo(arrowPoint2.x , arrowPoint2.y)
+            lineTo(arrowPoint3.x, arrowPoint3.y)
+            moveTo(end.x, end.y)
+            lineTo(arrowPoint4.x, arrowPoint4.y)
+        }
+    }
+    private fun createArrowPath(start: Offset, end: Offset): Path {
+        val arrowHeadLength = 40f
+        val arrowHeadAngle = 40f
+
+        val angle = atan2(end.y - start.y, end.x - start.x)
+        val angleRad = Math.toRadians(arrowHeadAngle.toDouble()).toFloat()
+
+        val startAngle = angle + Math.PI.toFloat()
+        val startArrow1 = Offset(
+            x = start.x - arrowHeadLength * cos(startAngle - angleRad),
+            y = start.y - arrowHeadLength * sin(startAngle - angleRad)
+        )
+        val startArrow2 = Offset(
+            x = start.x - arrowHeadLength * cos(startAngle + angleRad),
+            y = start.y - arrowHeadLength * sin(startAngle + angleRad)
+        )
+
+        val endArrow1 = Offset(
+            x = end.x - arrowHeadLength * cos(angle - angleRad),
+            y = end.y - arrowHeadLength * sin(angle - angleRad)
+        )
+        val endArrow2 = Offset(
+            x = end.x - arrowHeadLength * cos(angle + angleRad),
+            y = end.y - arrowHeadLength * sin(angle + angleRad)
+        )
+
+        return Path().apply {
+            // main line
+            moveTo(start.x, start.y)
+            lineTo(end.x, end.y)
+
+            moveTo(start.x, start.y)
+            lineTo(startArrow1.x, startArrow1.y)
+            moveTo(start.x, start.y)
+            lineTo(startArrow2.x, startArrow2.y)
+
+            moveTo(end.x, end.y)
+            lineTo(endArrow1.x, endArrow1.y)
+            moveTo(end.x, end.y)
+            lineTo(endArrow2.x, endArrow2.y)
         }
     }
 
@@ -437,7 +582,15 @@ class WhiteboardViewModel(
             updatedWhiteBoardId.flatMapLatest { id ->
                 pathRepository.getPathsForWhiteboard(whiteboardId = id ?: -1)
             }.collectLatest { paths ->
-                _state.update { it.copy(paths = paths) }
+                _state.update {
+                    it.copy(
+                        paths = paths,
+                        undoStack = ArrayDeque(paths),
+                        redoStack = ArrayDeque(),
+                        isUndoEnable = paths.isNotEmpty(),
+                        isRedoEnable = false
+                    )
+                }
             }
         }
     }
