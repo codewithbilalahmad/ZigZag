@@ -140,6 +140,7 @@ fun WhiteboardScreenContent(
                             })
                         ToolBarHorizontal(
                             onHomeIconClick = {
+                                onEvent(WhiteboardEvent.UpdateWhiteboardPreview)
                                 navHostController.navigateUp()
                             },
                             isRedoEnable = state.isRedoEnable,
@@ -197,6 +198,7 @@ fun WhiteboardScreenContent(
                     ) {
                         ToolBarVertical(
                             onHomeIconClick = {
+                                onEvent(WhiteboardEvent.UpdateWhiteboardPreview)
                                 navHostController.navigateUp()
                             },
                             isRedoEnable = state.isRedoEnable,

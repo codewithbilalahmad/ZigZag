@@ -2,13 +2,12 @@ package com.muhammad.zigzag.presentation.screens.whiteboard
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import org.muhammad.canvos.domain.model.ColorPaletteType
 import com.muhammad.zigzag.domain.model.DrawingTool
 import com.muhammad.zigzag.domain.model.DrawnPath
 import com.muhammad.zigzag.presentation.theme.defaultCanvasColors
 import com.muhammad.zigzag.presentation.theme.defaultDrawingColors
+import org.muhammad.canvos.domain.model.ColorPaletteType
 
 data class WhiteboardState(
     val paths: List<DrawnPath> = emptyList(),

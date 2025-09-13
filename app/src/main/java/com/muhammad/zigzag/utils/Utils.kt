@@ -31,20 +31,21 @@ fun drawWhiteboardThumbnail(
     val paint = Paint().apply {
         isAntiAlias = true
         isDither = true
-        style = Paint.Style.STROKE
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
     }
-    paths.forEach { dp ->
-        paint.strokeWidth = dp.strokeWidth
-        paint.color = dp.strokeColor.toArgb()
-        paint.alpha = (dp.opacity * 2.55f).coerceIn(0f, 255f).roundToInt()
-        paint.style = if (dp.backgroundColor != Color.Transparent) {
-            Paint.Style.FILL_AND_STROKE
-        } else {
-            Paint.Style.STROKE
+    paths.forEach { path ->
+        if(path.backgroundColor != Color.Transparent){
+            paint.style = Paint.Style.FILL
+            paint.color = path.backgroundColor.toArgb()
+            paint.alpha = (path.opacity * 2.55f).coerceIn(0f, 255f).roundToInt()
+            bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
         }
-        bitmapCanvas.drawPath(dp.path.asAndroidPath(), paint)
+        paint.style =  Paint.Style.STROKE
+        paint.strokeWidth = path.strokeWidth
+        paint.color = path.strokeColor.toArgb()
+        paint.alpha = (path.opacity * 2.55f).coerceIn(0f, 255f).roundToInt()
+        bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
     }
 
     bitmapCanvas.restore()
