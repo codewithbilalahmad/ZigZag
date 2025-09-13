@@ -173,7 +173,7 @@ fun ColorPaletteContent(
                     onColorPaletteIconClick(ColorPaletteType.STROKE)
                 })
             when (selectedDrawingTool) {
-                DrawingTool.RECTANGLE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE -> {
+                DrawingTool.RECTANGLE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.STAR -> {
                     Spacer(Modifier.height(20.dp))
                     ColorSection(
                         sectionTitle = "Background",

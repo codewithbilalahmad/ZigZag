@@ -13,5 +13,6 @@ enum class DrawingTool(val res: Int) {
     DOUBLE_ARROW(res = R.drawable.ic_double_arrow),
     RECTANGLE(res = R.drawable.ic_rectangle),
     CIRCLE(res = R.drawable.ic_circle),
-    TRIANGLE(res = R.drawable.ic_triangle)
+    TRIANGLE(res = R.drawable.ic_triangle),
+    STAR(res = R.drawable.ic_star),
 }

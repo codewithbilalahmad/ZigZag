@@ -37,6 +37,8 @@ import org.muhammad.canvos.domain.model.ColorPaletteType
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sin
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -335,9 +337,7 @@ class WhiteboardViewModel(
 
     private fun deletePaths(paths: List<DrawnPath>) {
         viewModelScope.launch {
-            paths.forEach { path ->
-                pathRepository.deletePath(path)
-            }
+            paths.forEach { path -> pathRepository.deletePath(path) }
             _state.update { state ->
                 val idsToDelete = paths.map { it.id }.toSet()
                 val newUndoStack = ArrayDeque(state.undoStack.filter { it.id !in idsToDelete })
@@ -402,6 +402,10 @@ class WhiteboardViewModel(
             DrawingTool.DOUBLE_ARROW -> {
                 createDoubleArrowPath(start = startOffset, end = offset)
             }
+
+            DrawingTool.STAR ->{
+                createStarPath(start = startOffset, end = offset)
+            }
         }
         updatedWhiteBoardId.value?.let { id ->
             _state.update {
@@ -417,6 +421,59 @@ class WhiteboardViewModel(
                 )
             }
         }
+    }
+
+    private fun createStarPath(
+        start: Offset,
+        end: Offset, numPoints : Int = 5, cornerRadius: Float = 12f
+    ): Path {
+        val left = min(start.x, end.x)
+        val top = min(start.y, end.y)
+        val right = max(start.x, end.x)
+        val bottom = max(start.y, end.y)
+
+        val width = right - left
+        val height = bottom - top
+        val center = Offset(left + width / 2, top + height / 2)
+
+        val outerRadius = min(width, height) / 2
+        val innerRadius = outerRadius / 2.5f
+
+        val path = Path()
+        val angleStep = (Math.PI / numPoints).toFloat()
+
+        val points = mutableListOf<Offset>()
+
+        for (i in 0 until numPoints * 2) {
+            val r = if (i % 2 == 0) outerRadius else innerRadius
+            val angle = i * angleStep - Math.PI / 2
+            val x = center.x + (cos(angle) * r).toFloat()
+            val y = center.y + (sin(angle) * r).toFloat()
+            points.add(Offset(x, y))
+        }
+
+        for (i in points.indices) {
+            val current = points[i]
+            val prev = points[(i - 1 + points.size) % points.size]
+            val next = points[(i + 1) % points.size]
+
+            val v1 = (current - prev).normalize()
+            val v2 = (current - next).normalize()
+
+            val p1 = current - v1 * cornerRadius
+            val p2 = current - v2 * cornerRadius
+
+            if (i == 0) {
+                path.moveTo(p1.x, p1.y)
+            } else {
+                path.lineTo(p1.x, p1.y)
+            }
+
+            path.quadraticTo(current.x, current.y, p2.x, p2.y)
+        }
+
+        path.close()
+        return path
     }
 
     private fun createEraserPath(continuingOffset: Offset): Path {
@@ -585,7 +642,7 @@ class WhiteboardViewModel(
             updatedWhiteBoardId.flatMapLatest { id ->
                 pathRepository.getPathsForWhiteboard(whiteboardId = id ?: -1)
             }.collectLatest { paths ->
-                _state.update {state ->
+                _state.update { state ->
                     val undoStack = if (state.undoStack.isEmpty() && state.redoStack.isEmpty()) {
                         ArrayDeque(paths)
                     } else {
