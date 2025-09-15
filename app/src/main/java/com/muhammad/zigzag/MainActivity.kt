@@ -37,10 +37,7 @@ class MainActivity : ComponentActivity() {
             ZigZagTheme(isDarkTheme) {
                 AppNavigation(
                     navHostController = navHostController,
-                    currentScheme = colorScheme
-                ) { colorScheme ->
-                    viewModel.saveColorScheme(colorScheme)
-                }
+                )
             }
         }
     }

@@ -9,6 +9,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import com.muhammad.zigzag.R
@@ -17,7 +18,7 @@ import com.muhammad.zigzag.R
 @Composable
 fun SettingTopBar(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
     TopAppBar(modifier = modifier, title = {
-        Text("Settings")
+        Text(stringResource(R.string.settings))
     }, navigationIcon = {
         IconButton(onClick = onBackClick) {
             Icon(

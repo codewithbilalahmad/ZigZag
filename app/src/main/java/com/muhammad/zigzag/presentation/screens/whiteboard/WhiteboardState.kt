@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntSize
 import com.muhammad.zigzag.domain.model.DrawingTool
 import com.muhammad.zigzag.domain.model.DrawnPath
+import com.muhammad.zigzag.domain.model.PathStyle
 import com.muhammad.zigzag.presentation.theme.defaultCanvasColors
 import com.muhammad.zigzag.presentation.theme.defaultDrawingColors
 import org.muhammad.canvos.domain.model.ColorPaletteType
@@ -32,8 +33,8 @@ data class WhiteboardState(
     val preferredFillColors : List<Color> = defaultDrawingColors,
     val preferredCanvasColor : List<Color> = defaultCanvasColors,
     val showCommandPaletteDialog : Boolean = false,
-    val undoStack : ArrayDeque<DrawnPath> = ArrayDeque(),
-    val redoStack : ArrayDeque<DrawnPath> = ArrayDeque(),
+    val undoStack : ArrayDeque<PathAction> = ArrayDeque(),
+    val redoStack : ArrayDeque<PathAction> = ArrayDeque(),
     val isUndoEnable : Boolean = undoStack.isNotEmpty(),
     val isRedoEnable : Boolean = redoStack.isNotEmpty()
 )

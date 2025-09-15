@@ -9,6 +9,7 @@ data class DrawnPath(
     val id: Long?=null,
     val path: Path,
     val drawnPath: DrawingTool,
+    val style : PathStyle = PathStyle.Stroke,
     val strokeWidth: Float,
     val strokeColor: Color,
     val backgroundColor: Color,

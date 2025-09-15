@@ -99,16 +99,16 @@ val Blue40 = Color(0xFF1976D2)
 val Green40 = Color(0xFF388E3C)
 val Orange40 = Color(0xFFF57C00)
 
-val LightBlue = Color(0xFFE1F5FE)
-val LightPink = Color(0xFFFFF1F1)
-val LightCyan = Color(0xFFE0F7FA)
-val LightGray = Color(0xFFF5F5F5)
+val LightBlue = Color(0xFF31AFE5)
+val LightPink = Color(0xFFE88585)
+val LightCyan = Color(0xFF70D9E7)
+val LightYellow = Color(0xFFCFDC2C)
 
 val defaultCanvasColors = listOf(
     LightBlue,
     LightPink,
     LightCyan,
-    LightGray
+    LightYellow
 )
 val defaultDrawingColors = listOf(
     Red40,

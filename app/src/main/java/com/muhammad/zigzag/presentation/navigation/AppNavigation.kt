@@ -6,16 +6,13 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.muhammad.zigzag.domain.model.ColorScheme
 import com.muhammad.zigzag.presentation.screens.home.HomeScreen
 import com.muhammad.zigzag.presentation.screens.settings.SettingScreen
 import com.muhammad.zigzag.presentation.screens.whiteboard.WhiteboardScreen
 
 @Composable
 fun AppNavigation(
-    navHostController: NavHostController,
-    currentScheme: ColorScheme,
-    onThemeSelected: (ColorScheme) -> Unit,
+    navHostController: NavHostController
 ) {
     NavHost(
         navController = navHostController,
@@ -36,8 +33,6 @@ fun AppNavigation(
         }
         composable<Destinations.SettingScreen> {
             SettingScreen(
-                currentScheme = currentScheme,
-                onThemeSelected = onThemeSelected,
                 onBackClick = {
                     navHostController.navigateUp()
                 })

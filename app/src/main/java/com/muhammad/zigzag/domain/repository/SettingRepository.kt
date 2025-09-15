@@ -1,6 +1,7 @@
 package com.muhammad.zigzag.domain.repository
 
 import androidx.compose.ui.graphics.Color
+import com.muhammad.zigzag.domain.model.AppLanguage
 import kotlinx.coroutines.flow.Flow
 import org.muhammad.canvos.domain.model.ColorPaletteType
 import com.muhammad.zigzag.domain.model.ColorScheme

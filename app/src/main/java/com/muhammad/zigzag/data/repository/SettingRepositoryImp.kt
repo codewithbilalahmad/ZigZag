@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.muhammad.zigzag.ZigZagApplication
+import com.muhammad.zigzag.domain.model.AppLanguage
 import com.muhammad.zigzag.domain.model.ColorScheme
 import com.muhammad.zigzag.domain.repository.SettingRepository
 import com.muhammad.zigzag.presentation.theme.defaultCanvasColors
@@ -39,12 +40,14 @@ class SettingRepositoryImp() : SettingRepository{
         }
     }
 
+
     override fun getColorScheme(): Flow<ColorScheme> {
         return context.prefs.data.map {prefs ->
             val colorScheme = prefs[COLOR_SCHEME_KEY] ?: ColorScheme.SYSTEM_DEFAULT.name
             ColorScheme.valueOf(colorScheme)
         }
     }
+
 
     override fun getPreferredFillColors(): Flow<List<Color>> {
         return context.prefs.data.map {prefs ->

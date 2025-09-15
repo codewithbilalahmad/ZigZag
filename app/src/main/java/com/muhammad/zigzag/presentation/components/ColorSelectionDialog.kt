@@ -52,8 +52,10 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toRect
+import com.muhammad.zigzag.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import android.graphics.Color as AndroidColor
@@ -86,7 +88,7 @@ fun ColorSelectionDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "Select Color", style = MaterialTheme.typography.titleMedium)
+                    Text(text = stringResource(R.string.choose_color), style = MaterialTheme.typography.titleMedium)
                     Box(
                         modifier = Modifier
                             .size(40.dp)
@@ -119,14 +121,14 @@ fun ColorSelectionDialog(
                 }
             }, dismissButton = {
                 TextButton(onClick = onDismiss) {
-                    Text("Close")
+                    Text(stringResource(R.string.close))
                 }
             }, confirmButton = {
                 TextButton(onClick = {
                     onColorSelected(backgroundColor)
                     onDismiss()
                 }) {
-                    Text("Select")
+                    Text(stringResource(R.string.select))
                 }
             })
     }

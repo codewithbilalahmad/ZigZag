@@ -1,7 +1,12 @@
 package com.muhammad.zigzag.domain.model
 
-enum class ColorScheme(val label : String){
-    SYSTEM_DEFAULT("System (Default)"),
-    LIGHT("Light"),
-    DARK("Dark")
+import androidx.annotation.StringRes
+import com.muhammad.zigzag.R
+
+enum class ColorScheme(
+    @get:StringRes val label : Int
+){
+    SYSTEM_DEFAULT(R.string.system_default),
+    LIGHT(R.string.light),
+    DARK(R.string.dark)
 }

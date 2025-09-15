@@ -6,6 +6,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.muhammad.zigzag.R
 import com.muhammad.zigzag.domain.model.DrawingTool
 import org.muhammad.canvos.domain.model.ColorPaletteType
 
@@ -33,7 +35,7 @@ fun CommandPaletteDialog(
     if(showDialog){
         AlertDialog(onDismissRequest = onDismiss, confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = "Done")
+                Text(text = stringResource(R.string.done))
             }
         }, title = {
             ColorPaletteContent(

@@ -19,9 +19,8 @@ class HomeViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(HomeState())
     val state = combine(_state, repository.getAllWhiteBoards(), settingRepository.getIsListOption()) { state, whiteBoards, isListLayout ->
-        state.copy(whiteBoards = whiteBoards, isListLayout = isListLayout)
+        state.copy(whiteboardsLoading = false, whiteBoards = whiteBoards, isListLayout = isListLayout)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), initialValue = HomeState())
-
     fun onAction(action: HomeEvent) {
         when (action) {
             is HomeEvent.OnDeleteWhiteboardClick -> {

@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -118,7 +119,7 @@ fun WhiteBoardItemCard(
                 )
             }
             Text(
-                text = "Last edited ${whiteBoard.lastEdited.formatDate()}",
+                text = "${stringResource(R.string.last_edited)}: ${whiteBoard.lastEdited.formatDate()}",
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.padding(bottom = 6.dp, start = 8.dp)
             )

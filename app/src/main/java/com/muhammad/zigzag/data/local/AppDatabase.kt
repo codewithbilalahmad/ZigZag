@@ -11,7 +11,7 @@ import com.muhammad.zigzag.data.local.entity.PathEntity
 import com.muhammad.zigzag.data.local.entity.WhiteBoardEntity
 
 @Database(
-    entities = [PathEntity::class, WhiteBoardEntity::class], version = 9, exportSchema = true
+    entities = [PathEntity::class, WhiteBoardEntity::class], version = 12, exportSchema = true
 )
 @TypeConverters(PathConvertor::class, LocalDateConvertor::class)
 abstract class AppDatabase : RoomDatabase(){

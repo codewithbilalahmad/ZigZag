@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.muhammad.zigzag.R
 import com.muhammad.zigzag.domain.model.DrawingTool
@@ -156,7 +157,7 @@ fun ColorPaletteContent(
             .fillMaxWidth()
             .padding(12.dp)) {
             ColorSection(
-                sectionTitle = "Canvas",
+                sectionTitle = stringResource(R.string.canvas),
                 colors = updatedCanvasColors,
                 selectedColor = selectedCanvasColor,
                 onColorChange = onSelectedCanvasColor,
@@ -165,7 +166,7 @@ fun ColorPaletteContent(
                 })
             Spacer(Modifier.height(20.dp))
             ColorSection(
-                sectionTitle = "Stroke",
+                sectionTitle = stringResource(R.string.stroke),
                 colors = updatedStrokeColors,
                 selectedColor = selectedStrokeColor,
                 onColorChange = onStrokeColorChange,
@@ -173,10 +174,10 @@ fun ColorPaletteContent(
                     onColorPaletteIconClick(ColorPaletteType.STROKE)
                 })
             when (selectedDrawingTool) {
-                DrawingTool.RECTANGLE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.STAR -> {
+                DrawingTool.RECTANGLE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.STAR, DrawingTool.CLOUD, DrawingTool.HEART -> {
                     Spacer(Modifier.height(20.dp))
                     ColorSection(
-                        sectionTitle = "Background",
+                        sectionTitle = stringResource(R.string.fill),
                         colors = backgroundColors,
                         isBackgroundColor = true,
                         selectedColor = selectedBackgroundColor,
@@ -190,14 +191,14 @@ fun ColorPaletteContent(
             }
             Spacer(Modifier.height(20.dp))
             SliderSection(
-                sectionTitle = "Stroke Width",
+                sectionTitle = stringResource(R.string.stroke_width),
                 sliderValue = strokeSlideValue,
                 slideValueRange = 1f..25f,
                 onSliderValueChange = onStrokeSlideValueChange
             )
             Spacer(Modifier.height(15.dp))
             SliderSection(
-                sectionTitle = "Opacity",
+                sectionTitle = stringResource(R.string.alpha),
                 sliderValue = opacitySlideValue,
                 onSliderValueChange = onOpacitySliderValueChange,
                 slideValueRange = 1f..100f

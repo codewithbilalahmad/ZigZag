@@ -6,8 +6,11 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import com.muhammad.zigzag.R
 import com.muhammad.zigzag.domain.model.DrawingTool
 
 @Composable
@@ -19,6 +22,19 @@ fun DrawingToolFab(
         Icon(
             modifier = Modifier.size(25.dp),
             painter = painterResource(selectedTool.res),
+            contentDescription = null
+        )
+    }
+}
+
+@Composable
+fun ShareDrawingFab(
+    onClick: () -> Unit,modifier: Modifier = Modifier
+) {
+    FloatingActionButton(onClick = { onClick() }, shape = CircleShape, modifier = modifier) {
+        Icon(
+            modifier = Modifier.size(25.dp),
+            imageVector = ImageVector.vectorResource(R.drawable.ic_share),
             contentDescription = null
         )
     }

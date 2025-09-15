@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.muhammad.zigzag.R
 
@@ -33,7 +34,7 @@ fun WhiteBoardCardMoreOptionMenu(
         shadowElevation = 4.dp,
     ) {
         DropdownMenuItem(text = {
-            Text("Rename")
+            Text(stringResource(R.string.rename))
         }, onClick = {
             onRenameClick()
             onMenuDismiss()
@@ -42,7 +43,7 @@ fun WhiteBoardCardMoreOptionMenu(
         })
         HorizontalDivider(modifier = Modifier.fillMaxWidth(), thickness = 0.5.dp)
         DropdownMenuItem(text = {
-            Text("Delete")
+            Text(stringResource(R.string.delete))
         }, onClick = {
             onDeleteClick()
             onMenuDismiss()

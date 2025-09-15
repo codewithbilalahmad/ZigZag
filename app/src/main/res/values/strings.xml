@@ -1,3 +1,35 @@
 <resources>
     <string name="app_name">ZigZag</string>
+    <string name="choose_theme">Choose Theme</string>
+    <string name="ok">OK</string>
+    <string name="close">Close</string>
+    <string name="choose_color">Choose Color</string>
+    <string name="select">Select</string>
+    <string name="canvas">Canvas</string>
+    <string name="stroke">Stroke</string>
+    <string name="fill">Fill</string>
+    <string name="stroke_width">Stroke Width</string>
+    <string name="alpha">Alpha</string>
+    <string name="done">Done</string>
+    <string name="settings">Settings</string>
+    <string name="rename">Rename</string>
+    <string name="delete">Delete</string>
+    <string name="last_edited">Last edited</string>
+    <string name="delete_drawing">Delete drawing?</string>
+    <string name="delete_drawing_confirmation">Are you sure to delete this drawing? This cant be undone.</string>
+    <string name="confirm">Confirm</string>
+    <string name="discard">Discard</string>
+    <string name="rename_drawing">Rename drawing</string>
+    <string name="cancel">Cancel</string>
+    <string name="dashboard">Dashboard\n</string>
+    <string name="app_theme">App Theme</string>
+    <string name="system_default">System (Default)</string>
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="app_language">App Language</string>
+    <string name="english">English</string>
+    <string name="urdu">Urdu</string>
+    <string name="choose_language">Choose Language</string>
+    <string name="french">French</string>
+    <string name="russian">Russian</string>
 </resources>

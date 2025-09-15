@@ -33,48 +33,61 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.muhammad.zigzag.domain.model.DrawnPath
+import com.muhammad.zigzag.domain.model.PathStyle
 import com.muhammad.zigzag.presentation.components.ColorSelectionDialog
 import com.muhammad.zigzag.presentation.components.CommandPaletteCard
 import com.muhammad.zigzag.presentation.components.CommandPaletteDialog
 import com.muhammad.zigzag.presentation.components.DrawingToolFab
 import com.muhammad.zigzag.presentation.components.DrawingToolsCardHorizontal
 import com.muhammad.zigzag.presentation.components.DrawingToolsCardVertical
+import com.muhammad.zigzag.presentation.components.ShareDrawingFab
 import com.muhammad.zigzag.presentation.components.ToolBarHorizontal
 import com.muhammad.zigzag.presentation.components.ToolBarVertical
 import com.muhammad.zigzag.presentation.theme.defaultDrawingColors
 import com.muhammad.zigzag.utils.UIType
+import com.muhammad.zigzag.utils.captureCanvasAsBitmap
 import com.muhammad.zigzag.utils.getUIType
 import com.muhammad.zigzag.utils.rememberScreenSize
+import com.muhammad.zigzag.utils.shareBitmap
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WhiteboardScreen(
-    viewModel: WhiteboardViewModel = koinViewModel(),navHostController: NavHostController
+    viewModel: WhiteboardViewModel = koinViewModel(), navHostController: NavHostController,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    WhiteboardScreenContent(onEvent = viewModel::onEvent, navHostController = navHostController, state = state)
+    WhiteboardScreenContent(
+        onEvent = viewModel::onEvent,
+        viewModel = viewModel,
+        navHostController = navHostController,
+        state = state
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WhiteboardScreenContent(
-    state: WhiteboardState,
+    state: WhiteboardState, viewModel: WhiteboardViewModel,
     navHostController: NavHostController,
     onEvent: (WhiteboardEvent) -> Unit,
 ) {
+    val context = LocalContext.current
     val screenSize = rememberScreenSize()
     val uiType = screenSize.getUIType()
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -114,7 +127,7 @@ fun WhiteboardScreenContent(
                 UIType.COMPACT -> {
                     DrawingCanvas(
                         modifier = Modifier.fillMaxSize(),
-                        state,
+                        state, viewModel = viewModel,
                         onEvent = onEvent
                     )
                     Column(
@@ -186,10 +199,28 @@ fun WhiteboardScreenContent(
                         selectedCanvasColor = state.canvasColor,
                         drawingName = state.whiteBoardName
                     )
+                    ShareDrawingFab(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .align(Alignment.TopEnd),
+                        onClick = {
+                            val bitmap = captureCanvasAsBitmap(
+                                width = state.canvasSize.width,
+                                height = state.canvasSize.height,
+                                state = state,
+                                viewModel = viewModel
+                            )
+                            shareBitmap(context, bitmap)
+                        })
                 }
 
                 else -> {
-                    DrawingCanvas(modifier = Modifier.fillMaxSize(), state, onEvent = onEvent)
+                    DrawingCanvas(
+                        modifier = Modifier.fillMaxSize(),
+                        state,
+                        onEvent = onEvent,
+                        viewModel = viewModel
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxHeight()
@@ -257,6 +288,19 @@ fun WhiteboardScreenContent(
                         },
                         selectedTool = state.selectedDrawingTool
                     )
+                    ShareDrawingFab(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .align(Alignment.BottomStart),
+                        onClick = {
+                            val bitmap = captureCanvasAsBitmap(
+                                width = state.canvasSize.width,
+                                height = state.canvasSize.height,
+                                state = state,
+                                viewModel = viewModel
+                            )
+                            shareBitmap(context, bitmap)
+                        })
                 }
             }
         }
@@ -266,8 +310,8 @@ fun WhiteboardScreenContent(
 @Composable
 fun DrawingCanvas(
     modifier: Modifier = Modifier,
-    state: WhiteboardState,
-    onEvent: (WhiteboardEvent) -> Unit
+    state: WhiteboardState, viewModel: WhiteboardViewModel,
+    onEvent: (WhiteboardEvent) -> Unit,
 ) {
     Canvas(
         modifier = modifier
@@ -283,7 +327,7 @@ fun DrawingCanvas(
                     }
                 )
             }) {
-        state.undoStack.forEach { path ->
+        viewModel.actionsToAddedPaths(state.undoStack).forEach { path ->
             drawCustomPath(path)
         }
         state.currentPath?.let { path ->
@@ -296,22 +340,79 @@ fun DrawingCanvas(
 }
 
 
-
-private fun DrawScope.drawCustomPath(path: DrawnPath) {
-    val pathOpacity = path.opacity / 100
-    when (path.backgroundColor) {
-        Color.Transparent -> {
+fun DrawScope.drawCustomPath(path: DrawnPath) {
+    val pathOpacity = path.opacity / 100f
+    when (path.style) {
+        PathStyle.Stroke -> {
             drawPath(
                 path = path.path,
                 color = path.strokeColor.copy(alpha = pathOpacity),
-                style = Stroke(width = path.strokeWidth.dp.toPx(), cap = StrokeCap.Round)
+                style = Stroke(
+                    width = path.strokeWidth.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round
+                )
             )
         }
 
-        else -> {
+        PathStyle.DASHED -> {
             drawPath(
                 path = path.path,
-                color = path.backgroundColor.copy(alpha = pathOpacity),
+                color = path.strokeColor.copy(alpha = pathOpacity),
+                style = Stroke(
+                    width = path.strokeWidth.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(30f, 20f), phase = 0f)
+                )
+            )
+        }
+
+        PathStyle.DOTTED -> {
+            drawPath(
+                path = path.path,
+                color = path.strokeColor.copy(alpha = pathOpacity),
+                style = Stroke(
+                    width = path.strokeWidth.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, path.strokeWidth * 2), phase = 0f)
+                )
+            )
+        }
+
+        PathStyle.Fill -> {
+            if (path.backgroundColor != Color.Transparent) {
+                drawPath(
+                    path = path.path,
+                    color = path.backgroundColor.copy(alpha = pathOpacity),
+                    style = Fill
+                )
+            } else {
+                drawPath(
+                    path = path.path,
+                    color = path.strokeColor.copy(alpha = pathOpacity),
+                    style = Stroke(
+                        width = path.strokeWidth.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+            }
+        }
+
+        PathStyle.Highlighter -> {
+            drawPath(
+                path = path.path,
+                color = path.strokeColor.copy(alpha = pathOpacity * 0.3f),
+                style = Fill
+            )
+        }
+
+        PathStyle.Spray -> {
+            drawPath(
+                path = path.path,
+                color = path.strokeColor.copy(alpha = pathOpacity * 0.7f),
                 style = Fill
             )
         }

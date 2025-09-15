@@ -1,6 +1,7 @@
 package com.muhammad.zigzag.presentation.screens.whiteboard
 
 import android.annotation.SuppressLint
+import android.graphics.RectF
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -14,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.muhammad.zigzag.domain.model.DrawingTool
 import com.muhammad.zigzag.domain.model.DrawnPath
+import com.muhammad.zigzag.domain.model.PathStyle
 import com.muhammad.zigzag.domain.model.WhiteBoard
 import com.muhammad.zigzag.domain.repository.PathRepository
 import com.muhammad.zigzag.domain.repository.SettingRepository
@@ -40,6 +42,7 @@ import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -48,8 +51,7 @@ class WhiteboardViewModel(
     private val whiteBoardRepository: WhiteBoardRepository,
     private val settingRepository: SettingRepository, savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val whiteBoardId =
-        savedStateHandle.toRoute<Destinations.WhiteBoardScreen>().whiteBoardId
+    private val whiteBoardId = savedStateHandle.toRoute<Destinations.WhiteBoardScreen>().whiteBoardId
     private var isFirstPath = true
     private var updatedWhiteBoardId = MutableStateFlow(whiteBoardId)
     private val _state = MutableStateFlow(WhiteboardState())
@@ -105,7 +107,10 @@ class WhiteboardViewModel(
 
             is WhiteboardEvent.CanvasColorChange -> {
                 _state.update { it.copy(canvasColor = event.canvasColor) }
-                upsertWhiteBoard()
+                viewModelScope.launch {
+                    upsertWhiteBoard()
+
+                }
             }
 
             is WhiteboardEvent.ContinueDrawing -> {
@@ -129,6 +134,7 @@ class WhiteboardViewModel(
                     }
                 }
                 _state.update { it.copy(currentPath = null, pathToBeDeleted = emptyList()) }
+                upsertWhiteBoardPreview()
             }
 
             is WhiteboardEvent.OnDrawingToolClose -> {
@@ -138,23 +144,24 @@ class WhiteboardViewModel(
             }
 
             is WhiteboardEvent.OnDrawingToolSelected -> {
-                when (event.drawingTool) {
-                    DrawingTool.RECTANGLE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE -> {
-                        _state.update {
-                            it.copy(selectedDrawingTool = event.drawingTool)
-                        }
-                    }
+                val newStyle = when (event.drawingTool) {
+                    DrawingTool.RECTANGLE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE,
+                    DrawingTool.HEART, DrawingTool.STAR, DrawingTool.CLOUD -> PathStyle.Fill
+                    DrawingTool.DASHED_LINE -> PathStyle.DASHED
+                    DrawingTool.DOTTED_LINE -> PathStyle.DOTTED
+                    DrawingTool.HIGHLIGHTER -> PathStyle.Highlighter
+                    DrawingTool.SPRAY_PAINT -> PathStyle.Spray
+                    else -> PathStyle.Stroke
+                }
 
-                    else -> {
-                        _state.update {
-                            it.copy(
-                                selectedDrawingTool = event.drawingTool,
-                                backgroundColor = Color.Transparent
-                            )
-                        }
-                    }
+                _state.update { state ->
+                    state.copy(
+                        selectedDrawingTool = event.drawingTool,
+                        backgroundColor = if (newStyle == PathStyle.Fill) state.backgroundColor else Color.Transparent
+                    )
                 }
             }
+
 
             WhiteboardEvent.OnDrawingToolFabClick -> {
                 _state.update { it.copy(isDrawingToolsCardVisible = !state.value.isDrawingToolsCardVisible) }
@@ -167,12 +174,25 @@ class WhiteboardViewModel(
             }
 
             is WhiteboardEvent.StartDrawing -> {
-                if (isFirstPath) {
-                    upsertWhiteBoard()
-                    isFirstPath = false
+                val tool = state.value.selectedDrawingTool
+                val style = when (tool) {
+                    DrawingTool.RECTANGLE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE,
+                    DrawingTool.HEART, DrawingTool.STAR, DrawingTool.CLOUD, -> PathStyle.Fill
+                    DrawingTool.DASHED_LINE -> PathStyle.DASHED
+                    DrawingTool.DOTTED_LINE -> PathStyle.DOTTED
+                    DrawingTool.HIGHLIGHTER -> PathStyle.Highlighter
+                    DrawingTool.SPRAY_PAINT -> PathStyle.Spray
+                    else -> PathStyle.Stroke
                 }
-                _state.update {
-                    it.copy(startingOffset = event.offset)
+                if (isFirstPath) {
+                    viewModelScope.launch {
+                        val newId = upsertWhiteBoard()
+                        isFirstPath = false
+
+                        addNewPath(event.offset, tool, style, newId)
+                    }
+                } else {
+                    addNewPath(event.offset, tool, style, updatedWhiteBoardId.value ?: 0L)
                 }
             }
 
@@ -218,7 +238,9 @@ class WhiteboardViewModel(
                 when (state.selectedColorPaletteType) {
                     ColorPaletteType.CANVAS -> {
                         _state.update { it.copy(canvasColor = color) }
-                        upsertWhiteBoard()
+                        viewModelScope.launch {
+                            upsertWhiteBoard()
+                        }
                     }
 
                     ColorPaletteType.STROKE -> {
@@ -247,14 +269,42 @@ class WhiteboardViewModel(
             }
         }
     }
+    private fun addNewPath(offset: Offset, tool: DrawingTool, style: PathStyle, boardId: Long) {
+        _state.update { state ->
+            state.copy(
+                startingOffset = offset,
+                currentPath = DrawnPath(
+                    id = System.currentTimeMillis(),
+                    path = Path().apply { moveTo(offset.x, offset.y) },
+                    drawnPath = tool,
+                    style = style,
+                    strokeWidth = state.strokeWidth,
+                    strokeColor = state.strokeColor,
+                    backgroundColor = state.backgroundColor,
+                    opacity = state.opacity,
+                    whiteBoardId = boardId
+                )
+            )
+        }
+    }
+
 
     private fun onUndoPath() {
         viewModelScope.launch {
             val currentState = state.value
             if (currentState.undoStack.isNotEmpty()) {
                 val updatedUndo = ArrayDeque(currentState.undoStack)
-                val last = updatedUndo.removeLast()
-                val updatedRedo = ArrayDeque(currentState.redoStack).apply { addLast(last) }
+                val lastAction = updatedUndo.removeLast()
+                val updatedRedo = ArrayDeque(currentState.redoStack).apply { addLast(lastAction) }
+                when (lastAction) {
+                    is PathAction.Add -> {
+                        pathRepository.deletePath(lastAction.path)
+                    }
+
+                    is PathAction.Delete -> {
+                        lastAction.paths.forEach { path -> pathRepository.upsertPath(path) }
+                    }
+                }
                 _state.update {
                     it.copy(
                         undoStack = updatedUndo,
@@ -272,8 +322,17 @@ class WhiteboardViewModel(
             val currentState = state.value
             if (currentState.redoStack.isNotEmpty()) {
                 val updatedRedo = ArrayDeque(currentState.redoStack)
-                val last = updatedRedo.removeLast()
-                val updatedUndo = ArrayDeque(currentState.undoStack).apply { addLast(last) }
+                val lastAction = updatedRedo.removeLast()
+                val updatedUndo = ArrayDeque(currentState.undoStack).apply { addLast(lastAction) }
+                when (lastAction) {
+                    is PathAction.Add -> {
+                        pathRepository.upsertPath(lastAction.path)
+                    }
+
+                    is PathAction.Delete -> {
+                        lastAction.paths.forEach { path -> pathRepository.deletePath(path) }
+                    }
+                }
                 _state.update {
                     it.copy(
                         undoStack = updatedUndo,
@@ -321,8 +380,7 @@ class WhiteboardViewModel(
 
     @SuppressLint("UseKtx")
     @OptIn(ExperimentalTime::class)
-    private fun upsertWhiteBoard() {
-        viewModelScope.launch {
+    private suspend fun upsertWhiteBoard() : Long {
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
             val updatedWhiteBoard = WhiteBoard(
                 name = state.value.whiteBoardName,
@@ -332,32 +390,23 @@ class WhiteboardViewModel(
             )
             val newId = whiteBoardRepository.upsertWhiteboard(updatedWhiteBoard)
             updatedWhiteBoardId.value = newId
-        }
+        return newId
     }
 
     private fun deletePaths(paths: List<DrawnPath>) {
         viewModelScope.launch {
             paths.forEach { path -> pathRepository.deletePath(path) }
-            _state.update { state ->
-                val idsToDelete = paths.map { it.id }.toSet()
-                val newUndoStack = ArrayDeque(state.undoStack.filter { it.id !in idsToDelete })
-                val newRedoStack = ArrayDeque(state.redoStack.filter { it.id !in idsToDelete })
-                state.copy(
-                    undoStack = newUndoStack,
-                    redoStack = newRedoStack,
-                    isUndoEnable = newUndoStack.isNotEmpty(),
-                    isRedoEnable = newRedoStack.isNotEmpty()
-                )
-            }
         }
     }
 
     private fun insertPath(path: DrawnPath) {
         viewModelScope.launch {
+            println("Insert path : $path")
             pathRepository.upsertPath(path)
+            println("Inserted path : $path")
             _state.update {
                 it.copy(
-                    undoStack = ArrayDeque(it.undoStack).apply { addLast(path) },
+                    undoStack = ArrayDeque(it.undoStack).apply { addLast(PathAction.Add(path)) },
                     redoStack = ArrayDeque(),
                     isUndoEnable = true,
                     isRedoEnable = false
@@ -368,64 +417,39 @@ class WhiteboardViewModel(
 
 
     private fun updateContinueOffsets(offset: Offset) {
-        val startOffset = state.value.startingOffset
+        val startOffset =state.value.startingOffset
         val updatedPath = when (state.value.selectedDrawingTool) {
-            DrawingTool.PEN, DrawingTool.HIGHLIGHTER, DrawingTool.LASER_PEN -> {
-                createFreeHandPath(start = startOffset, end = offset)
-            }
-
+            DrawingTool.PEN, DrawingTool.LASER_PEN -> createFreeHandPath(startOffset, offset)
+            DrawingTool.HIGHLIGHTER -> createHighlighterPath(startOffset, offset)
             DrawingTool.ERASER -> {
-                updatePathsToBeDeleted(start = startOffset, continuingOffset = offset)
-                createEraserPath(continuingOffset = offset)
+                updatePathsToBeDeleted(startOffset, offset)
+                createEraserPath(offset)
             }
 
-            DrawingTool.LINE -> {
-                createLinePath(start = startOffset, end = offset)
-            }
-
-            DrawingTool.ARROW -> {
-                createArrowPath(start = startOffset, end = offset)
-            }
-
-            DrawingTool.RECTANGLE -> {
-                createRectanglePath(start = startOffset, end = offset)
-            }
-
-            DrawingTool.CIRCLE -> {
-                createCirclePath(start = startOffset, end = offset)
-            }
-
-            DrawingTool.TRIANGLE -> {
-                createTrianglePath(start = startOffset, end = offset)
-            }
-
-            DrawingTool.DOUBLE_ARROW -> {
-                createDoubleArrowPath(start = startOffset, end = offset)
-            }
-
-            DrawingTool.STAR ->{
-                createStarPath(start = startOffset, end = offset)
-            }
+            DrawingTool.LINE, DrawingTool.DOTTED_LINE, DrawingTool.DASHED_LINE -> createLinePath(startOffset, offset)
+            DrawingTool.ARROW -> createArrowPath(startOffset, offset)
+            DrawingTool.RECTANGLE -> createRectanglePath(startOffset, offset)
+            DrawingTool.CIRCLE -> createCirclePath(startOffset, offset)
+            DrawingTool.TRIANGLE -> createTrianglePath(startOffset, offset)
+            DrawingTool.DOUBLE_ARROW -> createDoubleArrowPath(startOffset, offset)
+            DrawingTool.STAR -> createStarPath(startOffset, offset)
+            DrawingTool.HEART -> createHeartPath(startOffset, offset)
+            DrawingTool.CLOUD -> createCloudPath(startOffset, offset)
+            DrawingTool.SPRAY_PAINT -> createSprayPaintPath(startOffset, offset)
         }
-        updatedWhiteBoardId.value?.let { id ->
-            _state.update {
-                it.copy(
-                    currentPath = DrawnPath(
-                        path = updatedPath,
-                        drawnPath = state.value.selectedDrawingTool,
-                        strokeWidth = state.value.strokeWidth,
-                        backgroundColor = state.value.backgroundColor,
-                        opacity = state.value.opacity,
-                        strokeColor = state.value.strokeColor, whiteBoardId = id
-                    )
+
+        _state.update { state ->
+            state.copy(
+                currentPath = state.currentPath?.copy(
+                    path = updatedPath
                 )
-            }
+            )
         }
     }
 
     private fun createStarPath(
         start: Offset,
-        end: Offset, numPoints : Int = 5, cornerRadius: Float = 12f
+        end: Offset, numPoints: Int = 5, cornerRadius: Float = 12f,
     ): Path {
         val left = min(start.x, end.x)
         val top = min(start.y, end.y)
@@ -459,7 +483,6 @@ class WhiteboardViewModel(
 
             val v1 = (current - prev).normalize()
             val v2 = (current - next).normalize()
-
             val p1 = current - v1 * cornerRadius
             val p2 = current - v2 * cornerRadius
 
@@ -482,14 +505,102 @@ class WhiteboardViewModel(
         }
     }
 
-    private fun createFreeHandPath(start: Offset, end: Offset): Path {
-        val existingPath =
-            state.value.currentPath?.path ?: Path().apply { moveTo(start.x, start.y) }
+    private fun createHeartPath(start: Offset, end: Offset, roundness: Float = 0.35f): Path {
+        val left = minOf(start.x, end.x)
+        val right = maxOf(start.x, end.x)
+        val top = minOf(start.y, end.y)
+        val bottom = maxOf(start.y, end.y)
+
+        val width = right - left
+        val height = bottom - top
+
+        val size = max(1f, minOf(width, height))
+
+        val cx = (left + right) / 2f
+        val cy = (top + bottom) / 2f
+
+        val topY = cy - size * 0.28f
+        val bottomY = cy + size * 0.40f
+
+        val cpTopY = cy - size * (0.7f - 0.2f * roundness)
+        val cpRightX = cx + size * (0.5f + 0.15f * roundness)
+        val cpLeftX = cx - size * (0.5f + 0.15f * roundness)
+
+        val cpInnerY = cy - size * (0.05f + 0.05f * roundness)
+
         return Path().apply {
-            addPath(existingPath)
-            lineTo(end.x, end.y)
+            reset()
+            moveTo(cx, topY)
+
+            cubicTo(
+                cpRightX, cpTopY,
+                cx + size * 0.95f, cpInnerY,
+                cx, bottomY
+            )
+
+            cubicTo(
+                cx - size * 0.95f, cpInnerY,
+                cpLeftX, cpTopY,
+                cx, topY
+            )
+
+            close()
         }
     }
+
+    private fun createCloudPath(start: Offset, end: Offset): Path {
+        val left = min(start.x, end.x)
+        val top = min(start.y, end.y)
+        val right = max(start.x, end.x)
+        val bottom = max(start.y, end.y)
+        val width = right - left
+        val height = bottom - top
+
+        return Path().apply {
+            moveTo(left + width * 0.2f, bottom)
+
+            cubicTo(
+                left, bottom,
+                left, top + height * 0.5f,
+                left + width * 0.25f, top + height * 0.5f
+            )
+
+            cubicTo(
+                left + width * 0.2f, top,
+                left + width * 0.5f, top,
+                left + width * 0.5f, top + height * 0.25f
+            )
+
+            cubicTo(
+                left + width * 0.6f, top,
+                right - width * 0.2f, top,
+                right - width * 0.2f, top + height * 0.3f
+            )
+
+            cubicTo(
+                right, top + height * 0.5f,
+                right, bottom,
+                left + width * 0.8f, bottom
+            )
+
+            close()
+        }
+    }
+
+
+    private fun createFreeHandPath(start: Offset, end: Offset): Path {
+        val existingPath = state.value.currentPath?.path
+        return Path().apply {
+            if (existingPath != null) {
+                addPath(existingPath)
+                lineTo(end.x, end.y)
+            } else {
+                moveTo(start.x, start.y)
+                lineTo(end.x, end.y)
+            }
+        }
+    }
+
 
     private fun createLinePath(start: Offset, end: Offset): Path {
         return Path().apply {
@@ -616,6 +727,66 @@ class WhiteboardViewModel(
         return path
     }
 
+    private fun createSprayPaintPath(
+        start: Offset,
+        end: Offset,
+        density: Int = 200,
+        radius: Float = 12f,
+    ): Path {
+        val path = Path()
+        val dx = end.x - start.x
+        val dy = end.y - start.y
+
+        for (i in 0..density) {
+            val t = i / density.toFloat()
+            val x = start.x + dx * t
+            val y = start.y + dy * t
+
+            val randAngle = Random.nextFloat() * (2 * Math.PI).toFloat()
+            val randRadius = Random.nextFloat() * radius
+            val scatterX = x + cos(randAngle) * randRadius
+            val scatterY = y + sin(randAngle) * randRadius
+
+            path.addOval(
+                RectF(
+                    scatterX - 1.5f,
+                    scatterY - 1.5f,
+                    scatterX + 1.5f,
+                    scatterY + 1.5f
+                ).toComposeRect()
+            )
+        }
+
+        return path
+    }
+
+    private fun createHighlighterPath(
+        start: Offset,
+        end: Offset,
+        thickness: Float = 40f,
+    ): Path {
+        val path = Path()
+        val dx = end.x - start.x
+        val dy = end.y - start.y
+        val angle = atan2(dy, dx)
+
+        val px = -sin(angle) * (thickness / 2f)
+        val py = cos(angle) * (thickness / 2f)
+
+        val p1 = Offset(start.x + px, start.y + py)
+        val p2 = Offset(end.x + px, end.y + py)
+        val p3 = Offset(end.x - px, end.y - py)
+        val p4 = Offset(start.x - px, start.y - py)
+
+        path.moveTo(p1.x, p1.y)
+        path.lineTo(p2.x, p2.y)
+        path.lineTo(p3.x, p3.y)
+        path.lineTo(p4.x, p4.y)
+        path.close()
+
+        return path
+    }
+
     private fun updatePathsToBeDeleted(start: Offset, continuingOffset: Offset) {
         val pathsToBeDeleted = state.value.pathToBeDeleted.toMutableList()
         state.value.paths.forEach { drawnPath ->
@@ -643,15 +814,13 @@ class WhiteboardViewModel(
                 pathRepository.getPathsForWhiteboard(whiteboardId = id ?: -1)
             }.collectLatest { paths ->
                 _state.update { state ->
-                    val undoStack = if (state.undoStack.isEmpty() && state.redoStack.isEmpty()) {
-                        ArrayDeque(paths)
-                    } else {
-                        state.undoStack
+                    val actions = ArrayDeque<PathAction>().apply {
+                        paths.forEach { path -> addLast(PathAction.Add(path)) }
                     }
                     state.copy(
                         paths = paths,
-                        undoStack = undoStack,
-                        isUndoEnable = undoStack.isNotEmpty(),
+                        undoStack = actions,
+                        isUndoEnable = state.undoStack.isNotEmpty(),
                         isRedoEnable = state.redoStack.isNotEmpty()
                     )
                 }
@@ -663,4 +832,10 @@ class WhiteboardViewModel(
         val length = getDistance()
         return if (length != 0f) Offset(x = x / length, y / length) else Offset.Zero
     }
+
+    fun actionsToAddedPaths(stack: ArrayDeque<PathAction>): List<DrawnPath> {
+        return stack.toList().mapNotNull { (it as? PathAction.Add)?.path }
+    }
+
+    fun RectF.toComposeRect(): Rect = Rect(left, top, right, bottom)
 }
