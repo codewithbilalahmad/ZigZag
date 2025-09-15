@@ -5,7 +5,7 @@
     <string name="close">Close</string>
     <string name="choose_color">Choose Color</string>
     <string name="select">Select</string>
-    <string name="canvas">Canvas</string>
+    <string name="background">Background</string>
     <string name="stroke">Stroke</string>
     <string name="fill">Fill</string>
     <string name="stroke_width">Stroke Width</string>

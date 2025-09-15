@@ -157,7 +157,7 @@ fun ColorPaletteContent(
             .fillMaxWidth()
             .padding(12.dp)) {
             ColorSection(
-                sectionTitle = stringResource(R.string.canvas),
+                sectionTitle = stringResource(R.string.background),
                 colors = updatedCanvasColors,
                 selectedColor = selectedCanvasColor,
                 onColorChange = onSelectedCanvasColor,
