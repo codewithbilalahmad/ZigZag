@@ -234,9 +234,9 @@ fun ColorSection(
                                 color = if (selectedColor == Color.Transparent) MaterialTheme.colorScheme.primary else Color.Transparent,
                                 shape = CircleShape
                             )
-                            .padding(2.dp)
                             .clip(CircleShape)
-                            .clickable { onColorChange(Color.Transparent) },
+                            .clickable { onColorChange(Color.Transparent) }
+                            .padding(2.dp),
                         painter = painterResource(
                             R.drawable.ic_transparent_bg
                         ),
@@ -248,15 +248,17 @@ fun ColorSection(
             items(colors) { color ->
                 Box(
                     modifier = Modifier
+                        .clip(CircleShape)
                         .size(30.dp)
                         .border(
                             1.dp,
                             color = if (selectedColor == color) MaterialTheme.colorScheme.primary else Color.Transparent,
                             shape = CircleShape
                         )
-                        .padding(2.dp)
                         .background(color, CircleShape)
                         .clickable { onColorChange(color) }
+                        .padding(2.dp)
+
                 )
             }
             item {

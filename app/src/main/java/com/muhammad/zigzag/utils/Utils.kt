@@ -57,24 +57,53 @@ fun drawWhiteboardThumbnail(
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
     }
+
     paths.forEach { path ->
-        if (path.backgroundColor != Color.Transparent) {
-            paint.style = Paint.Style.FILL
-            paint.color = path.backgroundColor.toArgb()
-            paint.alpha = (path.opacity * 2.55f).coerceIn(0f, 255f).roundToInt()
-            bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
+        when (path.style) {
+            PathStyle.Fill -> {
+                paint.style = Paint.Style.FILL
+                paint.color = path.backgroundColor.toArgb()
+                paint.alpha = (path.opacity * 2.55f).roundToInt()
+                bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
+            }
+
+            PathStyle.Stroke -> {
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = path.strokeWidth
+                paint.color = path.strokeColor.toArgb()
+                paint.alpha = (path.opacity * 2.55f).roundToInt()
+                bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
+            }
+
+            PathStyle.Highlighter -> {
+                paint.style = Paint.Style.FILL
+                paint.color = path.strokeColor.toArgb()
+                // Highlighter is usually very transparent
+                paint.alpha = (path.opacity * 0.3f * 2.55f).roundToInt()
+                bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
+            }
+
+            PathStyle.Spray -> {
+                paint.style = Paint.Style.FILL
+                paint.color = path.strokeColor.toArgb()
+                paint.alpha = (path.opacity * 0.7f * 2.55f).roundToInt()
+                bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
+            }
+
+            PathStyle.DASHED, PathStyle.DOTTED -> {
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = path.strokeWidth
+                paint.color = path.strokeColor.toArgb()
+                paint.alpha = (path.opacity * 2.55f).roundToInt()
+                paint.pathEffect = when (path.style) {
+                    PathStyle.DASHED -> DashPathEffect(floatArrayOf(30f, 20f), 0f)
+                    PathStyle.DOTTED -> DashPathEffect(floatArrayOf(0f, path.strokeWidth * 2), 0f)
+                    else -> null
+                }
+                bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
+                paint.pathEffect = null
+            }
         }
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = path.strokeWidth
-        paint.color = path.strokeColor.toArgb()
-        paint.alpha = (path.opacity * 2.55f).coerceIn(0f, 255f).roundToInt()
-        paint.pathEffect = when(path.style){
-            PathStyle.DASHED -> DashPathEffect(floatArrayOf(30f, 20f), 0f)
-            PathStyle.DOTTED -> DashPathEffect(floatArrayOf(0f, path.strokeWidth * 2), 0f)
-            else -> null
-        }
-        bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
-        paint.pathEffect = null
     }
 
     bitmapCanvas.restore()
