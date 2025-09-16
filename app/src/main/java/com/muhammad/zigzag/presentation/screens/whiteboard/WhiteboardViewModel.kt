@@ -436,6 +436,7 @@ class WhiteboardViewModel(
             DrawingTool.HEART -> createHeartPath(startOffset, offset)
             DrawingTool.CLOUD -> createCloudPath(startOffset, offset)
             DrawingTool.SPRAY_PAINT -> createSprayPaintPath(startOffset, offset)
+            DrawingTool.WAVE -> createWavePath(startOffset, offset)
         }
 
         _state.update { state ->
@@ -444,6 +445,24 @@ class WhiteboardViewModel(
                     path = updatedPath
                 )
             )
+        }
+    }
+
+    private fun createWavePath(
+        start: Offset,
+        end: Offset, amplitude: Float = 40f,waveLength : Float = 80f
+    ): Path {
+        val width = end.x - start.x
+        val height = end.y - start.y
+        return Path().apply {
+            moveTo(start.x, start.y)
+            val steps = (width / waveLength).toInt().coerceAtLeast(1)
+            for(i in 0..steps){
+                val x = start.x + i * waveLength
+                val progress = (x - start.x) / width
+                val y = start.y + progress * height + sin(progress * 2 * Math.PI) * amplitude
+                lineTo(x = x.coerceAtMost(end.x), y = y.toFloat())
+            }
         }
     }
 

@@ -14,6 +14,7 @@ enum class DrawingTool(val res: Int) {
     DASHED_LINE(res = R.drawable.ic_dashed_line),
     ARROW(res = R.drawable.ic_arrow),
     DOUBLE_ARROW(res = R.drawable.ic_double_arrow),
+    WAVE(res = R.drawable.ic_wave),
     RECTANGLE(res = R.drawable.ic_rectangle),
     CIRCLE(res = R.drawable.ic_circle),
     TRIANGLE(res = R.drawable.ic_triangle),
