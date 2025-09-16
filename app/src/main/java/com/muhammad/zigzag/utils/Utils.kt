@@ -61,10 +61,17 @@ fun drawWhiteboardThumbnail(
     paths.forEach { path ->
         when (path.style) {
             PathStyle.Fill -> {
-                paint.style = Paint.Style.FILL
-                paint.color = path.backgroundColor.toArgb()
-                paint.alpha = (path.opacity * 2.55f).roundToInt()
-                bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
+                if(path.backgroundColor != Color.Transparent){
+                    paint.style = Paint.Style.FILL
+                    paint.color = path.backgroundColor.toArgb()
+                    paint.alpha = (path.opacity * 2.55f).roundToInt()
+                    bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
+                } else{
+                    paint.style = Paint.Style.STROKE
+                    paint.strokeWidth = path.strokeWidth
+                    paint.color = path.strokeColor.toArgb()
+                    bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
+                }
             }
 
             PathStyle.Stroke -> {
@@ -78,7 +85,6 @@ fun drawWhiteboardThumbnail(
             PathStyle.Highlighter -> {
                 paint.style = Paint.Style.FILL
                 paint.color = path.strokeColor.toArgb()
-                // Highlighter is usually very transparent
                 paint.alpha = (path.opacity * 0.3f * 2.55f).roundToInt()
                 bitmapCanvas.drawPath(path.path.asAndroidPath(), paint)
             }
